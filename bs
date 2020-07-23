@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+
+import sys
+import re
+import argparse
+
+DIGITS = "0123456789ABCDEF"
+
+class InvalidCliArgsError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(message)
+
+class Base:
+    def __init__(self, names, full_name, size, prefix):
+        self.names = full_name
+        self.full_name = full_name
+        self.size = size
+        self.prefix = prefix
+        self.reg = re.compile(
+            r"^({})?([{}][{}]*)$".format(
+                prefix,
+                DIGITS[1:size],
+                DIGITS[:size]))
+
+    def matches(self, s):
+        return self.reg.match(s) is not None
+
+    def parse(self, s):
+        match = self.reg.match(s)
+        if not match:
+            raise RuntimeError("Failed to parse: {}".format(s))
+        digits = match.group(2)
+        return sum((self.size**i)*DIGITS.index(d)
+                   for i, d in enumerate(reversed(digits)))
+
+    def format(self, n):
+        if n == 0:
+            return "0"
+        digits = []
+        while n > 0:
+            digits.append(DIGITS[n % self.size])
+            n = n // self.size
+        return "".join(reversed(digits))
+
+BASES = [
+    Base("dec", "decimal", 10, "0d"),
+    Base("bin", "binary", 2, "0b"),
+    Base("hex", "hexadecimal", 16, "0x"),
+    Base("oct", "octal", 8, "0o"),
+]
+
+COLOURS = {
+    "red": "31"
+}
+
+def show(s, *fmt_args, bold=False, colour=None, newline=True):
+    if bold or colour:
+        prefix = "\033["
+        codes = []
+        if bold:
+            codes.append("1")
+        if colour:
+            codes.append(COLOURS[colour])
+        prefix += ";".join(codes) + "m"
+        s = prefix + s + "\033[0m"
+    print(s.format(*fmt_args), end="\n" if newline else "")
+
+def show_newline():
+    print()
+
+def show_error(s, *fmt_args):
+    show("ERROR! ", colour="red", newline=False)
+    show(s, *fmt_args)
+
+def get_parser():
+    parser = argparse.ArgumentParser(description="No-bullshit base conversion.")
+    parser.add_argument("n", help="The number to convert.")
+    parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
+    parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
+    return parser
+
+def parse_base(s):
+    for base in BASES:
+        if s in base.names:
+            return base
+    try:
+        n = int(s)
+    except ValueError:
+        raise InvalidCliArgsError("Invalid base: {}".format(n))
+    if n < 2:
+        raise InvalidCliArgsError("Invalid base: {}".format(n))
+    if n > len(DIGITS):
+        raise InvalidCliArgsError("Only support up to base-16, but was given: {}".format(n))
+    return Base([], "base-{}".format(n), n, "")
+
+def do_conversion(args):
+    s = args.n
+    # Don't convert prefix to upper case.
+    if len(s) > 2 and s[0] == "0":
+        s = s[:2] + s[2:].upper()
+    else:
+        s = s.upper()
+    if args.fr:
+        input_bases = [parse_base(args.fr)]
+    else:
+        input_bases = [base for base in BASES if base.matches(s)]
+        if not input_bases:
+            raise InvalidCliArgsError("Unsupported base, must be <=16.")
+    if args.to:
+        output_bases = [parse_base(args.to)]
+    else:
+        output_bases = BASES
+    if len(input_bases) == 1 and len(output_bases) == 1:
+        n = input_bases[0].parse(s)
+        show(output_bases[0].format(n))
+    else:
+        for i, base in enumerate(input_bases):
+            n = base.parse(s)
+            show("[{}]", base.full_name, bold=True)
+            output_bases = [output_base for output_base in BASES
+                            if output_base != base]
+            max_name_length = max(len(base.full_name) for base in output_bases)
+            for output_base in output_bases:
+                show(
+                    "  {:<" + str(max_name_length+1) + "}{}",
+                    output_base.full_name,
+                    output_base.format(n))
+            if i != len(input_bases) - 1:
+                show_newline()
+
+def main():
+    parser = get_parser()
+    args = parser.parse_args()
+    try:
+        do_conversion(args)
+    except InvalidCliArgsError as e:
+        show_error(e.message)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
