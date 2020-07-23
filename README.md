@@ -5,6 +5,8 @@ todo
 * Tests.
 * man page.
 * deb.
+* Handle case where input num doesn't match expected.
+* Think of other possible formatting options... binary input? Binary output?
 
 ## Refs
 * <https://pypi.org/project/argparse-manpage/>
