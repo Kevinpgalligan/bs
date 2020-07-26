@@ -57,7 +57,7 @@ COLOURS = {
     "red": "31"
 }
 
-def show(s, *fmt_args, bold=False, colour=None, newline=True):
+def show(s, *fmt_args, bold=False, colour=None, newline=True, stream=sys.stdout):
     if bold or colour:
         prefix = "\033["
         codes = []
@@ -67,14 +67,17 @@ def show(s, *fmt_args, bold=False, colour=None, newline=True):
             codes.append(COLOURS[colour])
         prefix += ";".join(codes) + "m"
         s = prefix + s + "\033[0m"
-    print(s.format(*fmt_args), end="\n" if newline else "")
+    print(
+        s.format(*fmt_args),
+        end="\n" if newline else "",
+        file=stream)
 
 def show_newline():
     print()
 
 def show_error(s, *fmt_args):
-    show("ERROR! ", colour="red", newline=False)
-    show(s, *fmt_args)
+    show("ERROR! ", colour="red", newline=False, stream=sys.stderr)
+    show(s, *fmt_args, stream=sys.stderr)
 
 def get_parser():
     parser = argparse.ArgumentParser(
