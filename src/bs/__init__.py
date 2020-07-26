@@ -157,7 +157,7 @@ def do_conversion(args):
                 # conversion (from a base to itself).
                 continue
 
-            show("[{}]", base.full_name, bold=True)
+            show("[from {}]", base.full_name, bold=True)
             max_name_length = max(len(base.full_name) for base in output_bases)
             for output_base in output_bases:
                 if output_base != base:
