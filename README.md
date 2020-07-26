@@ -16,14 +16,16 @@ $ bs FFFE
 
 * Clone this repo.
 * Create a hard link pointing to `src/bs/__init__.py` in your `/usr/bin/` directory. Using a hard link means that the link won't stick around if you ever remove the repo.
+* Set execute permissions.
 
 ```
 $ pwd
 /home/kg
 $ git clone https://github.com/Kevinpgalligan/bs
 ...
-$ ln /home/kg/bs/src/bs/__init__.py /usr/bin/bs
+$ sudo ln /home/kg/bs/src/bs/__init__.py /usr/bin/bs
 ...
+$ chmod 755 /usr/bin/bs
 ```
 
 ## Examples
