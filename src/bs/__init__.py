@@ -12,13 +12,13 @@ class InvalidCliArgsError(Exception):
         super().__init__(message)
 
 class Base:
-    def __init__(self, names, full_name, size, prefix):
-        self.names = full_name
+    def __init__(self, short_names, full_name, size, prefix):
+        self.names = short_names + [full_name]
         self.full_name = full_name
         self.size = size
         self.prefix = prefix
         self.reg = re.compile(
-            r"^({})?([{}][{}]*)$".format(
+            r"^({})?(0|[{}][{}]*)$".format(
                 prefix,
                 DIGITS[1:size],
                 DIGITS[:size]))
@@ -43,11 +43,14 @@ class Base:
             n = n // self.size
         return "".join(reversed(digits))
 
+    def __eq__(self, other):
+        return isinstance(other, Base) and other.size == self.size
+
 BASES = [
-    Base("dec", "decimal", 10, "0d"),
-    Base("bin", "binary", 2, "0b"),
-    Base("hex", "hexadecimal", 16, "0x"),
-    Base("oct", "octal", 8, "0o"),
+    Base(["d", "dec"], "decimal", 10, "0d"),
+    Base(["b", "bin"], "binary", 2, "0b"),
+    Base(["h", "hex"], "hexadecimal", 16, "0x"),
+    Base(["o", "oct"], "octal", 8, "0o"),
 ]
 
 COLOURS = {
@@ -74,8 +77,34 @@ def show_error(s, *fmt_args):
     show(s, *fmt_args)
 
 def get_parser():
-    parser = argparse.ArgumentParser(description="No-bullshit base conversion.")
-    parser.add_argument("n", help="The number to convert.")
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""Convert between number bases up to base-16.
+
+The more specific the input, the more concise the output. If
+you don't specify the input base or desired output base, then
+the tool will output all possible (common) conversions. If you
+specify the input (using either the --from flag or a prefix like
+0x) and the output (using the --to flag) then it'll just output
+the result.
+
+=== SPECIAL BASES ===
+     n; prefix; names
+     2;     0b; b, bin, binary
+     8;     0o; o, oct, octal
+    10;     0d; d, dec, decimal
+    16;     0x; h, hex, hexadecimal
+
+=== EXAMPLES ===
+    bs 0                     # many -> many
+    bs 0x5                   # hex -> many
+    bs --from 6 5            # base-6 -> many
+    bs --from hexadecimal 5  # hex -> many
+    bs --from hex --to dec F # hex -> dec
+    bs --to decimal 0xF      # hex -> dec
+    bs -t d 0xF              # hex -> dec
+    echo 5 | bs -f d -t b    # Pipe example""")
+    parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
     return parser
@@ -87,7 +116,7 @@ def parse_base(s):
     try:
         n = int(s)
     except ValueError:
-        raise InvalidCliArgsError("Invalid base: {}".format(n))
+        raise InvalidCliArgsError("Invalid base: {}".format(s))
     if n < 2:
         raise InvalidCliArgsError("Invalid base: {}".format(n))
     if n > len(DIGITS):
@@ -95,14 +124,20 @@ def parse_base(s):
     return Base([], "base-{}".format(n), n, "")
 
 def do_conversion(args):
-    s = args.n
+    if args.n:
+        s = args.n
+    else:
+        s = sys.stdin.read()
     # Don't convert prefix to upper case.
     if len(s) > 2 and s[0] == "0":
         s = s[:2] + s[2:].upper()
     else:
         s = s.upper()
     if args.fr:
-        input_bases = [parse_base(args.fr)]
+        base = parse_base(args.fr)
+        if not base.matches(s):
+            raise InvalidCliArgsError("Number doesn't match expected base: " + s)
+        input_bases = [base]
     else:
         input_bases = [base for base in BASES if base.matches(s)]
         if not input_bases:
@@ -117,15 +152,19 @@ def do_conversion(args):
     else:
         for i, base in enumerate(input_bases):
             n = base.parse(s)
+            if all(obase == base for obase in output_bases):
+                # Don't print anything if there's only a pointless
+                # conversion (from a base to itself).
+                continue
+
             show("[{}]", base.full_name, bold=True)
-            output_bases = [output_base for output_base in BASES
-                            if output_base != base]
             max_name_length = max(len(base.full_name) for base in output_bases)
             for output_base in output_bases:
-                show(
-                    "  {:<" + str(max_name_length+1) + "}{}",
-                    output_base.full_name,
-                    output_base.format(n))
+                if output_base != base:
+                    show(
+                        "  {:<" + str(max_name_length+1) + "}{}",
+                        output_base.full_name,
+                        output_base.format(n))
             if i != len(input_bases) - 1:
                 show_newline()
 
