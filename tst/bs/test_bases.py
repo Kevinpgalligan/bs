@@ -15,12 +15,10 @@ def test_parse_base():
     ]
     for ss, expected in cases:
         for s in ss:
-            print(s, expected)
             if expected is None:
                 threw = False
                 try:
                     base = parse_base(s)
-                    print("oops:", base.full_name)
                 except InvalidCliArgsError:
                     threw = True
                 assert threw

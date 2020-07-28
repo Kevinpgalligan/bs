@@ -58,7 +58,7 @@ COLOURS = {
 }
 
 def show(s, *fmt_args, bold=False, colour=None, newline=True, stream=sys.stdout):
-    if bold or colour:
+    if stream.isatty() and (bold or colour):
         prefix = "\033["
         codes = []
         if bold:
