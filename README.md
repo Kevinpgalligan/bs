@@ -113,6 +113,3 @@ $ echo '5+10' | bc | bs -t h
 
 ## Contributing
 Feel free to submit tweaks. To run tests, install tox via `pip3 install tox` and then run the `tox` command from the base directory.
-
-## License
-MIT.
