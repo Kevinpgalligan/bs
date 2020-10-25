@@ -12,10 +12,10 @@ $ bs -t d F
 ```
 
 ## Installation
-This is a Python 3 script, installed from PyPI using pip.
+This is a Python 3 script, installed from [PyPI](https://pypi.org/project/base-convert-cli/) using pip.
 
 ```
-pip3 install baseconvertcli
+pip3 install base-convert-cli
 ```
 
 Hasn't been tested on Windows.
