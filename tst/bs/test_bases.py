@@ -1,6 +1,6 @@
 from bs import Base, parse_base, InvalidCliArgsError
 
-BASE = Base([], "blah", 2, "prefix")
+BASE = Base([], "blah", 2)
 
 def test_parse_base():
     cases = [
@@ -33,9 +33,9 @@ def test_matches():
     assert BASE.matches("1")
     assert BASE.matches("10")
     assert BASE.matches("11")
-    assert not BASE.matches("01") # no leading 0s
-    assert BASE.matches("prefix1")
-    assert BASE.matches("prefix0")
+    assert BASE.matches("01") # leading 0
+    assert not BASE.matches("prefix1")
+    assert not BASE.matches("prefix0")
     assert not BASE.matches("pre1")
     assert not BASE.matches("pre0")
     assert not BASE.matches("2")
@@ -52,9 +52,7 @@ def test_parse():
     assert 3 == BASE.parse("11")
     assert 4 == BASE.parse("100")
     assert 5 == BASE.parse("101")
-    assert 0 == BASE.parse("prefix0")
-    assert 1 == BASE.parse("prefix1")
-    assert 2 == BASE.parse("prefix10")
+    assert 5 == BASE.parse("000101")
 
 def test_format():
     assert "0" == BASE.format(0)
@@ -62,4 +60,3 @@ def test_format():
     assert "10" == BASE.format(2)
     assert "11" == BASE.format(3)
     assert "100" == BASE.format(4)
-

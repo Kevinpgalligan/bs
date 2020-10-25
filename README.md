@@ -2,8 +2,8 @@
 A CLI tool to convert numbers between bases, with as little typing as possible.
 
 ```
-$ bs --to decimal 0xFFFE
-65534
+$ bs --to decimal F
+15
 $ bs FFFE
 [from hexadecimal]
   decimal     65534
@@ -11,22 +11,14 @@ $ bs FFFE
   octal       177776
 ```
 
-## Setup
-**Requires Python 3**.
-
-* Clone this repo.
-* Create a hard link pointing to `src/bs/__init__.py` in your `/usr/bin/` directory. Using a hard link means that the link won't stick around if you ever remove the repo.
-* Set execute permissions.
+## Installation
+This is a Python 3 script, installed from PyPI using pip.
 
 ```
-$ pwd
-/home/kg
-$ git clone https://github.com/Kevinpgalligan/bs
-...
-$ sudo ln /home/kg/bs/src/bs/__init__.py /usr/bin/bs
-...
-$ chmod 755 /usr/bin/bs
+pip3 install bs
 ```
+
+Hasn't been tested on Windows.
 
 ## Examples
 If you don't specify a base, it does all common conversions.
@@ -42,21 +34,14 @@ $ bs 0
 <clipped output here>
 ```
 
-Specifying base through prefix.
-
-```
-$ bs 0xF
-[from hexadecimal]
-  decimal 15
-  binary  1111
-  octal   17
-```
-
 Specifying base through a flag.
 
 ```
 $ bs --from hex F
-<same output>
+[from hexadecimal]
+  decimal     15
+  binary      1111
+  octal       17
 ```
 
 From base-6.
@@ -94,9 +79,7 @@ $ bs --from hex --to dec F
 Shorthand for lazy people.
 
 ```
-$ bs --to decimal 0xF
-15
-$ bs -t d 0xF
+$ bs -f h -t d F
 15
 ```
 

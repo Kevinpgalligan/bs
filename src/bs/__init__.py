@@ -12,16 +12,11 @@ class InvalidCliArgsError(Exception):
         super().__init__(message)
 
 class Base:
-    def __init__(self, short_names, full_name, size, prefix):
+    def __init__(self, short_names, full_name, size):
         self.names = short_names + [full_name]
         self.full_name = full_name
         self.size = size
-        self.prefix = prefix
-        self.reg = re.compile(
-            r"^({})?(0|[{}][{}]*)$".format(
-                prefix,
-                DIGITS[1:size],
-                DIGITS[:size]))
+        self.reg = re.compile("^[{}]+$".format(DIGITS[:size]))
 
     def matches(self, s):
         return self.reg.match(s) is not None
@@ -30,7 +25,7 @@ class Base:
         match = self.reg.match(s)
         if not match:
             raise RuntimeError("Failed to parse: {}".format(s))
-        digits = match.group(2)
+        digits = match.group()
         return sum((self.size**i)*DIGITS.index(d)
                    for i, d in enumerate(reversed(digits)))
 
@@ -47,10 +42,10 @@ class Base:
         return isinstance(other, Base) and other.size == self.size
 
 BASES = [
-    Base(["d", "dec"], "decimal", 10, "0d"),
-    Base(["b", "bin"], "binary", 2, "0b"),
-    Base(["h", "hex"], "hexadecimal", 16, "0x"),
-    Base(["o", "oct"], "octal", 8, "0o"),
+    Base(["d", "dec"], "decimal", 10),
+    Base(["b", "bin"], "binary", 2),
+    Base(["h", "hex"], "hexadecimal", 16),
+    Base(["o", "oct"], "octal", 8),
 ]
 
 COLOURS = {
@@ -87,26 +82,22 @@ def get_parser():
 The more specific the input, the more concise the output. If
 you don't specify the input base or desired output base, then
 the tool will output all possible (common) conversions. If you
-specify the input (using either the --from flag or a prefix like
-0x) and the output (using the --to flag) then it'll just output
-the result.
+specify the input (using the --from flag) and the output (using
+the --to flag) then it'll just output a single conversion.
 
-=== SPECIAL BASES ===
-     n; prefix; names
-     2;     0b; b, bin, binary
-     8;     0o; o, oct, octal
-    10;     0d; d, dec, decimal
-    16;     0x; h, hex, hexadecimal
+Special bases:
+  n; names
+  2; b, bin, binary
+  8; o, oct, octal
+ 10; d, dec, decimal
+ 16; h, hex, hexadecimal
 
-=== EXAMPLES ===
-    bs 0                     # many -> many
-    bs 0x5                   # hex -> many
-    bs --from 6 5            # base-6 -> many
-    bs --from hexadecimal 5  # hex -> many
-    bs --from hex --to dec F # hex -> dec
-    bs --to decimal 0xF      # hex -> dec
-    bs -t d 0xF              # hex -> dec
-    echo 5 | bs -f d -t b    # Pipe example""")
+Examples:
+  bs 0                     # many -> many
+  bs --from 6 5            # base-6 -> many
+  bs --from hexadecimal 5  # hex -> many
+  bs --from hex --to dec F # hex -> dec
+  bs -f h -t d F           # short version""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
@@ -124,18 +115,14 @@ def parse_base(s):
         raise InvalidCliArgsError("Invalid base: {}".format(n))
     if n > len(DIGITS):
         raise InvalidCliArgsError("Only support up to base-16, but was given: {}".format(n))
-    return Base([], "base-{}".format(n), n, "")
+    return Base([], "base-{}".format(n), n)
 
 def do_conversion(args):
     if args.n:
         s = args.n
     else:
         s = sys.stdin.read()
-    # Don't convert prefix to upper case.
-    if len(s) > 2 and s[0] == "0":
-        s = s[:2] + s[2:].upper()
-    else:
-        s = s.upper()
+    s = s.upper()
     if args.fr:
         base = parse_base(args.fr)
         if not base.matches(s):

@@ -8,6 +8,7 @@ setup(
     url="https://github.com/Kevinpgalligan/bs",
     author="Kevin Galligan",
     author_email="galligankevinp@gmail.com",
+    scripts=["scripts/bs"],
     packages=find_packages("src"),
     package_dir={'': 'src'},
     install_requires=[]
