@@ -2,20 +2,20 @@
 A CLI tool to convert numbers between bases, with as little typing as possible.
 
 ```
-$ bs --to decimal F
-15
 $ bs FFFE
 [from hexadecimal]
   decimal     65534
   binary      1111111111111110
   octal       177776
+$ bs -t d F
+15
 ```
 
 ## Installation
 This is a Python 3 script, installed from PyPI using pip.
 
 ```
-pip3 install bs
+pip3 install baseconvertcli
 ```
 
 Hasn't been tested on Windows.

@@ -1,4 +1,4 @@
-from bs import Base, parse_base, InvalidCliArgsError
+from baseconvertcli import Base, parse_base, InvalidCliArgsError
 
 BASE = Base([], "blah", 2)
 
