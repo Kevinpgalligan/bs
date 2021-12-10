@@ -96,11 +96,13 @@ Examples:
   bs 0                     # many -> many
   bs --from 6 5            # base-6 -> many
   bs --from hexadecimal 5  # hex -> many
+  bs 5 --pad 8             # left-pad with zeros so there are at least 8 digits
   bs --from hex --to dec F # hex -> dec
   bs -f h -t d F           # short version""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
+    parser.add_argument("--pad", default=0, type=int, required=False, help="Whether to add zero padding.")
     return parser
 
 def parse_base(s):
@@ -138,7 +140,7 @@ def do_conversion(args):
         output_bases = BASES
     if len(input_bases) == 1 and len(output_bases) == 1:
         n = input_bases[0].parse(s)
-        show(output_bases[0].format(n))
+        show(output_bases[0].format(n).zfill(args.pad))
     else:
         for i, base in enumerate(input_bases):
             n = base.parse(s)
@@ -154,7 +156,7 @@ def do_conversion(args):
                     show(
                         "  {:<" + str(max_name_length+1) + "}{}",
                         output_base.full_name,
-                        output_base.format(n))
+                        output_base.format(n).zfill(args.pad))
             if i != len(input_bases) - 1:
                 show_newline()
 
