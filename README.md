@@ -34,6 +34,18 @@ $ bs 0
 <clipped output here>
 ```
 
+Specify the base through the prefix `0b` for binary, `0o` for octal, `0d` for decimal and `0x` for hex.
+
+```
+$ bs 0xF
+bs 0xF
+[from hexadecimal]
+  decimal     15
+  binary      1111
+  octal       17
+
+```
+
 Specifying base through a flag.
 
 ```
@@ -44,15 +56,15 @@ $ bs --from hex F
   octal       17
 ```
 
-From base-6.
+From base-36 (the maximum supported base, which uses the digits 0-9 and then a-z).
 
 ```
-$ bs --from 6 54
-[from base-6]
-  decimal     34
-  binary      100010
-  hexadecimal 22
-  octal       42
+$ bs --from 36 zx1
+[from base-36]
+  decimal     46549
+  binary      1011010111010101
+  hexadecimal B5D5
+  octal       132725
 ```
 
 To base-7.
@@ -81,6 +93,12 @@ Shorthand for lazy people.
 ```
 $ bs -f h -t d F
 15
+```
+
+Padding with zeroes.
+
+```
+$ bs --from decimal --to binary --pad 8 14
 ```
 
 Aaaaand input through a pipe.

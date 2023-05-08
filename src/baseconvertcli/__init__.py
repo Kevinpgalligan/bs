@@ -4,7 +4,7 @@ import sys
 import re
 import argparse
 
-DIGITS = "0123456789ABCDEF"
+DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 class InvalidCliArgsError(Exception):
     def __init__(self, message):
@@ -12,11 +12,16 @@ class InvalidCliArgsError(Exception):
         super().__init__(message)
 
 class Base:
-    def __init__(self, short_names, full_name, size):
+    def __init__(self, short_names, full_name, size, prefix):
         self.names = short_names + [full_name]
         self.full_name = full_name
         self.size = size
-        self.reg = re.compile("^[{}]+$".format(DIGITS[:size]))
+        self.prefix = prefix
+        if prefix:
+            prefix_reg = "(" + prefix + ")?"
+        else:
+            prefix_reg = ""
+        self.reg = re.compile("^{}([{}]+)$".format(prefix_reg, DIGITS[:size]))
 
     def matches(self, s):
         return self.reg.match(s) is not None
@@ -25,7 +30,10 @@ class Base:
         match = self.reg.match(s)
         if not match:
             raise RuntimeError("Failed to parse: {}".format(s))
-        digits = match.group()
+        if self.prefix:
+            digits = match.group(2)
+        else:
+            digits = match.group()
         return sum((self.size**i)*DIGITS.index(d)
                    for i, d in enumerate(reversed(digits)))
 
@@ -42,10 +50,13 @@ class Base:
         return isinstance(other, Base) and other.size == self.size
 
 BASES = [
-    Base(["d", "dec"], "decimal", 10),
-    Base(["b", "bin"], "binary", 2),
-    Base(["h", "hex"], "hexadecimal", 16),
-    Base(["o", "oct"], "octal", 8),
+    # Specify prefixes using uppercase letters because input strings
+    # are converted to uppercase first. But from the user perspective,
+    # lowercase letters work.
+    Base(["d", "dec"], "decimal", 10, "0D"),
+    Base(["b", "bin"], "binary", 2, "0B"),
+    Base(["h", "hex"], "hexadecimal", 16, "0X"),
+    Base(["o", "oct"], "octal", 8, "0O"),
 ]
 
 COLOURS = {
@@ -77,20 +88,22 @@ def show_error(s, *fmt_args):
 def get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="""Convert between number bases up to base-16.
+        description="""Convert between number bases up to base-36.
 
 The more specific the input, the more concise the output. If
 you don't specify the input base or desired output base, then
 the tool will output all possible (common) conversions. If you
 specify the input (using the --from flag) and the output (using
-the --to flag) then it'll just output a single conversion.
+the --to flag) then it'll just output a single conversion. You can
+also specify the input base using the prefixes 0b (binary), 0o (octal),
+0d (decimal) and 0x (hex).
 
 Special bases:
-  n; names
-  2; b, bin, binary
-  8; o, oct, octal
- 10; d, dec, decimal
- 16; h, hex, hexadecimal
+  n | names
+  2 | b, bin, binary
+  8 | o, oct, octal
+ 10 | d, dec, decimal
+ 16 | h, hex, hexadecimal
 
 Examples:
   bs 0                     # many -> many
@@ -98,7 +111,8 @@ Examples:
   bs --from hexadecimal 5  # hex -> many
   bs 5 --pad 8             # left-pad with zeros so there are at least 8 digits
   bs --from hex --to dec F # hex -> dec
-  bs -f h -t d F           # short version""")
+  bs -f h -t d F           # short version
+  bs 0xF                   # specify base through prefix""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
@@ -116,8 +130,11 @@ def parse_base(s):
     if n < 2:
         raise InvalidCliArgsError("Invalid base: {}".format(n))
     if n > len(DIGITS):
-        raise InvalidCliArgsError("Only support up to base-16, but was given: {}".format(n))
-    return Base([], "base-{}".format(n), n)
+        raise InvalidCliArgsError("Only support up to base-36, but given: {}".format(n))
+    for base in BASES:
+        if n == base.size:
+            return base
+    return Base([], "base-{}".format(n), n, "")
 
 def do_conversion(args):
     if args.n:
@@ -133,7 +150,7 @@ def do_conversion(args):
     else:
         input_bases = [base for base in BASES if base.matches(s)]
         if not input_bases:
-            raise InvalidCliArgsError("Unsupported base, must be <=16.")
+            raise InvalidCliArgsError("Non-standard input base, specify base with --from.")
     if args.to:
         output_bases = [parse_base(args.to)]
     else:
