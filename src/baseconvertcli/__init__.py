@@ -21,7 +21,7 @@ class Base:
             prefix_reg = "(" + prefix + ")?"
         else:
             prefix_reg = ""
-        self.reg = re.compile("^{}([{}]+)$".format(prefix_reg, DIGITS[:size]))
+        self.reg = re.compile("^{}([{digits}]+)(\\.([{digits}]+))?$".format(prefix_reg, digits=DIGITS[:size]))
 
     def matches(self, s):
         return self.reg.match(s) is not None
@@ -32,10 +32,12 @@ class Base:
             raise RuntimeError("Failed to parse: {}".format(s))
         if self.prefix:
             digits = match.group(2)
+            fractional_digits = match.group(3)
         else:
-            digits = match.group()
-        return sum((self.size**i)*DIGITS.index(d)
-                   for i, d in enumerate(reversed(digits)))
+            digits = match.group(1)
+            fractional_digits = match.group(2)
+        return (string_to_number(digits, self.size),
+                string_to_number(fractional_digits[1:], self.size) if fractional_digits else None)
 
     def format(self, n):
         if n == 0:
@@ -48,6 +50,10 @@ class Base:
 
     def __eq__(self, other):
         return isinstance(other, Base) and other.size == self.size
+
+def string_to_number(s, base_size):
+    return sum((base_size**i)*DIGITS.index(d)
+               for i, d in enumerate(reversed(s))) 
 
 BASES = [
     # Specify prefixes using uppercase letters because input strings
@@ -112,7 +118,8 @@ Examples:
   bs 5 --pad 8             # left-pad with zeros so there are at least 8 digits
   bs --from hex --to dec F # hex -> dec
   bs -f h -t d F           # short version
-  bs 0xF                   # specify base through prefix""")
+  bs 0xf                   # specify base through prefix
+  bs 1.f                   # fractions""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
@@ -156,11 +163,14 @@ def do_conversion(args):
     else:
         output_bases = BASES
     if len(input_bases) == 1 and len(output_bases) == 1:
-        n = input_bases[0].parse(s)
-        show(output_bases[0].format(n).zfill(args.pad))
+        n, fractional_n = input_bases[0].parse(s)
+        show(output_bases[0].format(n).zfill(args.pad), newline=False)
+        if fractional_n:
+            show("." + output_bases[0].format(fractional_n), newline=False)
+        show_newline()
     else:
         for i, base in enumerate(input_bases):
-            n = base.parse(s)
+            n, fractional_n = base.parse(s)
             if all(obase == base for obase in output_bases):
                 # Don't print anything if there's only a pointless
                 # conversion (from a base to itself).
@@ -173,7 +183,11 @@ def do_conversion(args):
                     show(
                         "  {:<" + str(max_name_length+1) + "}{}",
                         output_base.full_name,
-                        output_base.format(n).zfill(args.pad))
+                        output_base.format(n).zfill(args.pad),
+                        newline=False)
+                    if fractional_n:
+                        show("." + output_base.format(fractional_n), newline=False)
+                    show_newline()
             if i != len(input_bases) - 1:
                 show_newline()
 
