@@ -3,6 +3,7 @@
 import sys
 import re
 import argparse
+import decimal
 
 DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -36,10 +37,24 @@ class Base:
         else:
             digits = match.group(1)
             fractional_digits = match.group(2)
-        return (string_to_number(digits, self.size),
-                string_to_number(fractional_digits[1:], self.size) if fractional_digits else None)
+        if fractional_digits:
+            fractional_digits = fractional_digits[1:] # trim the dot
+            fraction = decimal.Decimal("0.0")
+            i = 0
+            exp = 1
+            while i < len(fractional_digits):
+                fraction += decimal.Decimal(DIGITS.index(fractional_digits[i])) / decimal.Decimal(self.size**exp)
+                i += 1
+                exp += 1
+            # Skip the leading 0 and the decimal point.
+            fraction_as_str = str(fraction%1)[2:]
+            fractional_n = int(fraction_as_str)
+            magnitude = len(fraction_as_str)
+        else:
+            fractional_n = None
+        return (string_to_number(digits, self.size), fractional_n, magnitude if fractional_n else None)
 
-    def format(self, n):
+    def format_integral(self, n):
         if n == 0:
             return "0"
         digits = []
@@ -47,6 +62,17 @@ class Base:
             digits.append(DIGITS[n % self.size])
             n = n // self.size
         return "".join(reversed(digits))
+
+    def format_fraction(self, n, magnitude):
+        # Source: https://www.geeksforgeeks.org/convert-decimal-fraction-binary-number/
+        # I'm unsure exactly how it works...
+        q = 10**magnitude
+        digits = []
+        while n > 0:
+            n *= self.size
+            digits.append(DIGITS[n // q])
+            n %= q
+        return "".join(digits)
 
     def __eq__(self, other):
         return isinstance(other, Base) and other.size == self.size
@@ -119,11 +145,13 @@ Examples:
   bs --from hex --to dec F # hex -> dec
   bs -f h -t d F           # short version
   bs 0xf                   # specify base through prefix
-  bs 1.f                   # fractions""")
+  bs --precision 10 1.f    # fractions, setting precision""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
     parser.add_argument("--pad", default=0, type=int, required=False, help="Whether to add zero padding.")
+    parser.add_argument("--precision", default=8, type=int,
+                        required=False, help="Precision for converting fractions, default is 8.")
     return parser
 
 def parse_base(s):
@@ -144,6 +172,9 @@ def parse_base(s):
     return Base([], "base-{}".format(n), n, "")
 
 def do_conversion(args):
+    if not args.precision > 0:
+        raise InvalidCliArgsError("Precision must be at least 1.")
+    decimal.getcontext().prec = args.precision
     if args.n:
         s = args.n
     else:
@@ -163,14 +194,14 @@ def do_conversion(args):
     else:
         output_bases = BASES
     if len(input_bases) == 1 and len(output_bases) == 1:
-        n, fractional_n = input_bases[0].parse(s)
-        show(output_bases[0].format(n).zfill(args.pad), newline=False)
+        n, fractional_n, magnitude = input_bases[0].parse(s)
+        show(output_bases[0].format_integral(n).zfill(args.pad), newline=False)
         if fractional_n:
-            show("." + output_bases[0].format(fractional_n), newline=False)
+            show("." + output_bases[0].format_fraction(fractional_n, magnitude), newline=False)
         show_newline()
     else:
         for i, base in enumerate(input_bases):
-            n, fractional_n = base.parse(s)
+            n, fractional_n, magnitude = base.parse(s)
             if all(obase == base for obase in output_bases):
                 # Don't print anything if there's only a pointless
                 # conversion (from a base to itself).
@@ -183,10 +214,10 @@ def do_conversion(args):
                     show(
                         "  {:<" + str(max_name_length+1) + "}{}",
                         output_base.full_name,
-                        output_base.format(n).zfill(args.pad),
+                        output_base.format_integral(n).zfill(args.pad),
                         newline=False)
                     if fractional_n:
-                        show("." + output_base.format(fractional_n), newline=False)
+                        show("." + output_base.format_fraction(fractional_n, magnitude), newline=False)
                     show_newline()
             if i != len(input_bases) - 1:
                 show_newline()

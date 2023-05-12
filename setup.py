@@ -9,7 +9,7 @@ setup(
     description="A CLI tool that converts numbers between bases.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="1.0.0",
+    version="1.0.2",
     url="https://github.com/Kevinpgalligan/bs",
     author="Kevin Galligan",
     author_email="galligankevinp@gmail.com",
