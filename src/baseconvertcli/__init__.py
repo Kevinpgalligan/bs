@@ -63,7 +63,7 @@ class Base:
             n = n // self.size
         return "".join(reversed(digits))
 
-    def format_fraction(self, n, magnitude):
+    def format_fraction(self, n, magnitude, precision):
         # Source: https://www.geeksforgeeks.org/convert-decimal-fraction-binary-number/
         # I'm unsure exactly how it works...
         q = 10**magnitude
@@ -72,6 +72,12 @@ class Base:
             n *= self.size
             digits.append(DIGITS[n // q])
             n %= q
+            if len(digits) >= precision:
+                break
+        while digits[-1] == "0":
+            # It's possible that we terminated before the next non-zero
+            # digit due to precision, so remove the trailing zeroes.
+            digits.pop()
         return "".join(digits)
 
     def __eq__(self, other):
@@ -145,13 +151,13 @@ Examples:
   bs --from hex --to dec F # hex -> dec
   bs -f h -t d F           # short version
   bs 0xf                   # specify base through prefix
-  bs --precision 10 1.f    # fractions, setting precision""")
+  bs --prec 10 1.f         # fractions, setting precision""")
     parser.add_argument("n", nargs="?", help="The number to convert. Can also be passed in ASCII/text format through standard input.")
     parser.add_argument("--from", "-f", required=False, dest="fr", help="The input base. Number or name.")
     parser.add_argument("--to", "-t", required=False, help="The output base. Number or name.")
     parser.add_argument("--pad", default=0, type=int, required=False, help="Whether to add zero padding.")
-    parser.add_argument("--precision", default=8, type=int,
-                        required=False, help="Precision for converting fractions, default is 8.")
+    parser.add_argument("--prec", default=32, type=int,
+                        required=False, help="Precision for converting fractions, default is 32.")
     return parser
 
 def parse_base(s):
@@ -172,9 +178,9 @@ def parse_base(s):
     return Base([], "base-{}".format(n), n, "")
 
 def do_conversion(args):
-    if not args.precision > 0:
+    if not args.prec > 0:
         raise InvalidCliArgsError("Precision must be at least 1.")
-    decimal.getcontext().prec = args.precision
+    decimal.getcontext().prec = args.prec
     if args.n:
         s = args.n
     else:
@@ -195,9 +201,11 @@ def do_conversion(args):
         output_bases = BASES
     if len(input_bases) == 1 and len(output_bases) == 1:
         n, fractional_n, magnitude = input_bases[0].parse(s)
-        show(output_bases[0].format_integral(n).zfill(args.pad), newline=False)
+        integral_part_as_str = output_bases[0].format_integral(n).zfill(args.pad)
+        show(integral_part_as_str, newline=False)
         if fractional_n:
-            show("." + output_bases[0].format_fraction(fractional_n, magnitude), newline=False)
+            fractional_part_as_str = output_bases[0].format_fraction(fractional_n, magnitude, args.prec)
+            show("." + fractional_part_as_str, newline=False)
         show_newline()
     else:
         for i, base in enumerate(input_bases):
@@ -217,7 +225,7 @@ def do_conversion(args):
                         output_base.format_integral(n).zfill(args.pad),
                         newline=False)
                     if fractional_n:
-                        show("." + output_base.format_fraction(fractional_n, magnitude), newline=False)
+                        show("." + output_base.format_fraction(fractional_n, magnitude, args.prec), newline=False)
                     show_newline()
             if i != len(input_bases) - 1:
                 show_newline()

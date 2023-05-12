@@ -105,7 +105,7 @@ $ bs --from decimal --to binary --pad 8 14
 Setting precision for converting fractional numbers.
 
 ```
-$ bs --precision 10 --from 3 --to decimal 0.1
+$ bs --prec 10 --from 3 --to decimal 0.1
 0.3333333333
 ```
 
